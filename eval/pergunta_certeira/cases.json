@@ -1,0 +1,44 @@
+[
+  {
+    "id": "goteira-teto-001",
+    "scenario": "Simulação doméstica: Julio no papel de FDE recém-alocado numa \"empresa\", mãe no papel de PO/dona do problema. Cenário sintético, escrito antes de qualquer rodada real com transcrição de voz.",
+    "po_time_budget_hint": "baixo — PO tem pouca paciência e nenhum vocabulário técnico",
+    "user_context": {
+      "niche_profile": "forward_deployed_engineering",
+      "career_goal": "Forward Deployed Engineer",
+      "role_profile": "technical_operator_simulando_fde"
+    },
+    "transcript_so_far": [
+      { "speaker": "PO", "text": "Óia, tem uma goteira aí no teto do quarto, dá um jeito nisso." }
+    ],
+    "unknown_dimensions": [
+      {
+        "id": "localizacao_origem",
+        "leverage": "alta",
+        "why": "sem saber se é telhado, cano ou infiltração lateral, qualquer solução proposta é chute"
+      },
+      {
+        "id": "condicao_atual",
+        "leverage": "alta",
+        "why": "só quando chove vs. constante muda se é urgente agora ou pode esperar a próxima chuva"
+      },
+      {
+        "id": "tempo_ocorrencia",
+        "leverage": "media",
+        "why": "recente vs. crônico muda se já causou dano estrutural"
+      },
+      {
+        "id": "tentativas_anteriores",
+        "leverage": "media",
+        "why": "evita repetir o que já foi tentado e descartado"
+      },
+      {
+        "id": "urgencia_impacto",
+        "leverage": "baixa_nesse_estagio",
+        "why": "importa pra priorizar, mas só depois de entender o que é"
+      }
+    ],
+    "expected_top_targets": ["localizacao_origem", "condicao_atual"],
+    "notes": "Uma pergunta que mira as duas dimensões de alta leverage ao mesmo tempo (ex.: 'é só quando chove ou o tempo todo, e dá pra ver de onde vem a água?') pontua mais que uma pergunta de alvo único. Pergunta genérica tipo 'desde quando isso acontece?' mira só em tempo_ocorrencia (media leverage) e deveria pontuar mais baixo."
+  }
+]
