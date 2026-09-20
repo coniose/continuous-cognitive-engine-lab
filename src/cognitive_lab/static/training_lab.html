@@ -32,6 +32,9 @@
     .meter { height:16px; border:1.5px solid var(--ink); margin:16px 0; overflow:hidden; }
     .meter i { display:block; width:0%; height:100%; background:var(--acid); transition:width .18s linear; }
     .feed { grid-column:1/-1; }
+    .wake { grid-column:1/-1; background:#e8edcf; }
+    .wake-row { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+    .wake-state { font:700 13px ui-monospace,monospace; }
     .session { display:grid; grid-template-columns:140px 1fr auto; gap:14px; border-top:1px solid var(--line); padding:14px 0; align-items:center; }
     .session:first-child { border-top:0; }
     .session small { color:var(--muted); }
@@ -77,6 +80,14 @@
       <input id="vad" type="range" min="0" max="1" step=".05" value=".55">
       <p style="color:var(--muted);font-size:13px;line-height:1.5">Estes valores são registrados junto com cada sessão. Eles não treinam o modelo automaticamente.</p>
     </section>
+    <section class="wake">
+      <div class="kicker">Wake phrase / escuta local</div>
+      <div class="wake-row">
+        <div><strong id="wakeState">ESCUTA DESATIVADA</strong><p style="margin:8px 0 0;color:var(--muted);font-size:13px;max-width:680px">Ao ativar, o navegador mantém o microfone local aberto, detecta trechos de fala por volume e salva cada trecho como candidato de treinamento. Ainda não executa comandos nem reconhece a frase sozinho.</p></div>
+        <button id="wakeToggle">Ativar escuta contínua</button>
+      </div>
+      <div id="wakeStatus" class="status" style="color:var(--ink)">Aguardando ativação explícita.</div>
+    </section>
     <section class="feed"><div class="kicker">Sessões coletadas</div><div id="sessions"><p style="color:var(--muted)">Nenhuma sessão ainda.</p></div></section>
   </div>
 </main>
@@ -88,7 +99,7 @@ const prompts = [
   'Conte como você investigaria uma falha em um processo.',
   'Explique uma tarefa que um assistente local deveria executar para você.'
 ];
-let promptIndex=0, recorder, chunks=[], startedAt, timer;
+let promptIndex=0, recorder, chunks=[], startedAt, timer, wakeStream, wakeContext, wakeAnalyser, wakeData, wakeLoop, wakeRecorder, wakeChunks=[], wakeStartedAt, wakeSilenceAt;
 const $=id=>document.getElementById(id);
 function refreshValues(){ $('silenceValue').textContent=$('silence').value+' ms'; $('semanticValue').textContent=Number($('semantic').value).toFixed(2); $('vadValue').textContent=Number($('vad').value).toFixed(2); }
 document.querySelectorAll('input').forEach(x=>x.addEventListener('input',refreshValues)); refreshValues();
@@ -101,6 +112,11 @@ $('start').onclick=async()=>{
 };
 $('stop').onclick=()=>{ if(!recorder)return; recorder.stop(); recorder.stream.getTracks().forEach(t=>t.stop()); clearInterval(timer); recorder.onstop=saveSession; $('start').disabled=false; $('stop').disabled=true; $('status').textContent='Salvando sessão e feedback...'; };
 async function saveSession(){ const audio=new Blob(chunks,{type:recorder.mimeType||'audio/webm'}); const payload={user_id:$('userId').value,niche_profile:$('nicheProfile').value,culture_context:'engineering_experimentation',career_goal:$('careerGoal').value,role_profile:$('roleProfile').value,prompt:$('promptText').textContent,duration_ms:Date.now()-startedAt,endpointing:{silence_ms:Number($('silence').value),semantic_weight:Number($('semantic').value),vad_threshold:Number($('vad').value)},manual_end:true,feedback:'PENDING',transcript_status:'PENDING'}; const created=await fetch('/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()); await fetch('/api/sessions/'+created.session_id+'/audio',{method:'POST',headers:{'Content-Type':audio.type},body:audio}); $('status').textContent='Sessão registrada para '+$('userId').value+'. O encerramento manual foi salvo como referência.'; $('dot').className='dot ready'; $('connection').textContent='LOCALHOST · READY'; loadSessions(); }
+function rms(){ let sum=0; for(const value of wakeData){ const centered=(value-128)/128; sum+=centered*centered; } return Math.sqrt(sum/wakeData.length); }
+function startWakeSegment(){ if(wakeRecorder)return; wakeChunks=[]; wakeStartedAt=Date.now(); wakeRecorder=new MediaRecorder(wakeStream); wakeRecorder.ondataavailable=e=>{if(e.data.size)wakeChunks.push(e.data)}; wakeRecorder.onstop=saveWakeSegment; wakeRecorder.start(100); $('wakeStatus').textContent='Trecho de fala detectado; aguardando silêncio...'; }
+async function saveWakeSegment(){ const audio=new Blob(wakeChunks,{type:wakeRecorder.mimeType||'audio/webm'}); wakeRecorder=null; if(audio.size<12000){ $('wakeStatus').textContent='Trecho curto ignorado.'; return; } const payload={mode:'wake_phrase_enrollment',user_id:$('userId').value,niche_profile:$('nicheProfile').value,culture_context:'engineering_experimentation',career_goal:$('careerGoal').value,role_profile:$('roleProfile').value,prompt:'Candidato a frase de ativação',duration_ms:Date.now()-wakeStartedAt,endpointing:{silence_ms:Number($('silence').value),semantic_weight:Number($('semantic').value),vad_threshold:Number($('vad').value)},manual_end:false,feedback:'PENDING',transcript_status:'PENDING'}; const created=await fetch('/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()); await fetch('/api/sessions/'+created.session_id+'/audio',{method:'POST',headers:{'Content-Type':audio.type},body:audio}); $('wakeStatus').textContent='Candidato salvo localmente. Continue falando outras variações.'; loadSessions(); }
+async function toggleWake(){ if(wakeStream){ wakeStream.getTracks().forEach(t=>t.stop()); cancelAnimationFrame(wakeLoop); wakeStream=null; wakeContext.close(); wakeContext=null; $('wakeState').textContent='ESCUTA DESATIVADA'; $('wakeToggle').textContent='Ativar escuta contínua'; $('wakeStatus').textContent='Microfone fechado localmente.'; return; } try { wakeStream=await navigator.mediaDevices.getUserMedia({audio:true}); wakeContext=new AudioContext(); const source=wakeContext.createMediaStreamSource(wakeStream); wakeAnalyser=wakeContext.createAnalyser(); wakeAnalyser.fftSize=512; wakeData=new Uint8Array(wakeAnalyser.fftSize); source.connect(wakeAnalyser); $('wakeState').textContent='ESCUTA LOCAL ATIVA'; $('wakeToggle').textContent='Desativar escuta'; $('wakeStatus').textContent='Ouvindo localmente. Diga a frase de ativação e suas variações.'; const tick=()=>{ if(!wakeStream)return; wakeAnalyser.getByteTimeDomainData(wakeData); const level=rms(); const now=Date.now(); if(level>0.035){ if(!wakeRecorder)startWakeSegment(); wakeSilenceAt=null; } else if(wakeRecorder){ wakeSilenceAt=wakeSilenceAt||now; if(now-wakeSilenceAt>Number($('silence').value))wakeRecorder.stop(); } wakeLoop=requestAnimationFrame(tick); }; tick(); } catch(e){ $('wakeStatus').textContent='Não foi possível abrir o microfone: '+e.message; } }
+$('wakeToggle').onclick=toggleWake;
 async function loadSessions(){ const data=await fetch('/api/sessions').then(r=>r.json()); $('sessions').innerHTML=data.sessions.length?data.sessions.map(s=>`<div class="session"><span class="tag">${s.feedback}</span><div><strong>${s.user_id||'legacy'} · ${s.niche_profile||'sem nicho'}</strong><br><small>${s.prompt} · ${new Date(s.created_at).toLocaleString()} · ${Math.round(s.duration_ms/1000)}s · pausa ${s.endpointing.silence_ms}ms</small></div><button class="secondary" onclick="feedback('${s.session_id}','ACCEPTED')">Marcar útil</button></div>`).join(''):'<p style="color:var(--muted)">Nenhuma sessão ainda.</p>'; }
 async function feedback(id,value){ await fetch('/api/sessions/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feedback:value})}); loadSessions(); }
 loadSessions();
