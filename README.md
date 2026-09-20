@@ -23,6 +23,20 @@ python -m cognitive_lab.cli
 
 Abra http://127.0.0.1:8765/.
 
+## Transcrição local
+
+Depois de instalar o extra de voz, processe as sessões gravadas:
+
+```powershell
+python -m pip install -e ".[voice]"
+python -m cognitive_lab.cli --transcribe --runs-dir runs/prototype --model-size small
+```
+
+O comando preserva os arquivos de áudio e adiciona ao JSON de cada sessão o
+texto, segmentos, timestamps por palavra e probabilidades. O primeiro perfil
+usa CPU para funcionar sem depender de DLLs CUDA específicas; a camada de
+transcrição registra o backend usado para permitir benchmark posterior na GPU.
+
 ## Identidade da sessão
 
 ```text
