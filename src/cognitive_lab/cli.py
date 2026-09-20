@@ -15,9 +15,10 @@ def main() -> None:
     parser.add_argument("--runs-dir", type=Path, default=Path("runs/training"))
     parser.add_argument("--transcribe", action="store_true", help="transcribe recorded sessions")
     parser.add_argument("--model-size", default="small")
+    parser.add_argument("--reprocess", action="store_true", help="reprocess already transcribed sessions")
     args = parser.parse_args()
     if args.transcribe:
-        print(json.dumps(transcribe_sessions(args.runs_dir, args.model_size), ensure_ascii=False, indent=2))
+        print(json.dumps(transcribe_sessions(args.runs_dir, args.model_size, not args.reprocess), ensure_ascii=False, indent=2))
         return
     serve_training_lab(args.host, args.port, args.runs_dir)
 
