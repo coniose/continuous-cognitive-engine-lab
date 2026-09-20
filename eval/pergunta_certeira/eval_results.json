@@ -1,0 +1,17 @@
+[
+  {
+    "id": "goteira-teto-001",
+    "pergunta_gerada": "Onde exatamente fica a goteira — em cima de qual cômodo ou parede — e ela só aparece quando chove ou também com o tempo seco?",
+    "dimensoes_cobertas": [
+      "condicao_atual",
+      "localizacao_origem"
+    ],
+    "expected_top_targets": [
+      "condicao_atual",
+      "localizacao_origem"
+    ],
+    "acerto_alta_leverage": true,
+    "cobertura_completa": true,
+    "justificativa_juiz": "A pergunta cobre onde fica a goteira (cômodo/parede) e se ocorre só na chuva ou também em tempo seco, mas não aborda tempo de ocorrência, tentativas anteriores ou urgência/impacto."
+  }
+]
