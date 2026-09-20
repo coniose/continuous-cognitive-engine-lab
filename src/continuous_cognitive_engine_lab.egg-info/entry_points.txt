@@ -1,0 +1,2 @@
+[console_scripts]
+cognitive-lab = cognitive_lab.cli:main

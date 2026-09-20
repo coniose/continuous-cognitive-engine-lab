@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhythmic / Training Lab</title>
+  <style>
+    :root { --ink:#17211b; --paper:#f3f0e7; --line:#c8c6bb; --acid:#d7ef4b; --muted:#6e756d; --red:#d85b43; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:Inter,Segoe UI,sans-serif; }
+    main { max-width:1240px; margin:0 auto; padding:34px 28px 60px; }
+    header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--ink); padding-bottom:22px; }
+    h1 { font-size:clamp(32px,5vw,68px); letter-spacing:-.06em; line-height:.9; margin:0; max-width:560px; }
+    .kicker { font:700 11px/1.2 ui-monospace,monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+    .live { display:flex; gap:8px; align-items:center; font:700 12px ui-monospace,monospace; }
+    .dot { width:10px; height:10px; border-radius:50%; background:var(--red); }
+    .dot.ready { background:#54a866; }
+    .grid { display:grid; grid-template-columns:1.35fr .65fr; gap:22px; margin-top:24px; }
+    section { border:1.5px solid var(--ink); padding:22px; background:#f8f6ef; }
+    .prompt { min-height:190px; display:flex; flex-direction:column; justify-content:space-between; background:var(--ink); color:var(--paper); }
+    .prompt h2 { font-size:30px; letter-spacing:-.04em; margin:0; max-width:700px; }
+    .prompt p { color:#cdd2c9; margin-bottom:0; }
+    button { border:1.5px solid var(--ink); background:var(--acid); color:var(--ink); padding:12px 16px; font-weight:800; cursor:pointer; }
+    button.secondary { background:transparent; }
+    button.danger { background:var(--red); color:#fff; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    .controls { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+    .status { font:13px ui-monospace,monospace; margin-top:16px; color:#cdd2c9; }
+    label { display:block; margin:18px 0 6px; font-size:13px; font-weight:700; }
+    input[type=range] { width:100%; accent-color:var(--ink); }
+    .value { float:right; font:12px ui-monospace,monospace; color:var(--muted); }
+    .meter { height:16px; border:1.5px solid var(--ink); margin:16px 0; overflow:hidden; }
+    .meter i { display:block; width:0%; height:100%; background:var(--acid); transition:width .18s linear; }
+    .feed { grid-column:1/-1; }
+    .session { display:grid; grid-template-columns:140px 1fr auto; gap:14px; border-top:1px solid var(--line); padding:14px 0; align-items:center; }
+    .session:first-child { border-top:0; }
+    .session small { color:var(--muted); }
+    .tag { font:11px ui-monospace,monospace; border:1px solid var(--line); padding:5px 7px; }
+    @media (max-width:760px) { main{padding:22px 16px}.grid{grid-template-columns:1fr}.session{grid-template-columns:1fr}.feed{grid-column:auto} header{display:block}.live{margin-top:18px} }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="kicker">Continuous Cognitive Engine Lab</div><h1>Ensine o agente a esperar.</h1></div>
+    <div class="live"><span id="dot" class="dot ready"></span><span id="connection">LOCALHOST · READY</span></div>
+  </header>
+  <div class="grid">
+    <section class="prompt">
+      <div><div class="kicker" style="color:#aeb6a8">Sessão de treino · usuário Dev</div><h2 id="promptText">Fale sobre algo que você está construindo.</h2><p>O agente escuta enquanto o microfone está ativo. Encerre manualmente quando sua ideia terminar.</p></div>
+      <div><div class="meter"><i id="meter"></i></div><div id="status" class="status">Microfone mutado. Pronto para começar.</div><div class="controls"><button id="start">Começar a falar</button><button id="stop" class="danger" disabled>Finalizar fala</button><button id="next" class="secondary">Trocar tema</button></div></div>
+    </section>
+    <section>
+      <div class="kicker">Identidade / endpointing</div>
+      <label>Usuário</label>
+      <select id="userId" style="width:100%;padding:10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:700">
+        <option value="dev">Dev — criador da ferramenta</option>
+        <option value="operator_01">Usuário 2 — operador de atendimento</option>
+      </select>
+      <label>Perfil de comportamento</label>
+      <select id="roleProfile" style="width:100%;padding:10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:700">
+        <option value="technical_operator">Técnico / engenharia / IA</option>
+        <option value="customer_service_operator">Atendimento ao cliente</option>
+      </select>
+      <label>Nicho</label>
+      <select id="nicheProfile" style="width:100%;padding:10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:700">
+        <option value="ai_engineering_predictive_maintenance">IA / engenharia / manutenção preditiva</option>
+        <option value="online_sales_customer_service">Vendas online / atendimento ao cliente</option>
+      </select>
+      <label>Objetivo de carreira</label>
+      <input id="careerGoal" value="build_local_voice_agents" style="width:100%;padding:10px;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);font-weight:700">
+      <label>Pausa mínima antes de sugerir fim <span class="value" id="silenceValue">900 ms</span></label>
+      <input id="silence" type="range" min="300" max="2500" step="50" value="900">
+      <label>Peso da completude semântica <span class="value" id="semanticValue">0.60</span></label>
+      <input id="semantic" type="range" min="0" max="1" step=".05" value=".6">
+      <label>Sensibilidade do VAD <span class="value" id="vadValue">0.55</span></label>
+      <input id="vad" type="range" min="0" max="1" step=".05" value=".55">
+      <p style="color:var(--muted);font-size:13px;line-height:1.5">Estes valores são registrados junto com cada sessão. Eles não treinam o modelo automaticamente.</p>
+    </section>
+    <section class="feed"><div class="kicker">Sessões coletadas</div><div id="sessions"><p style="color:var(--muted)">Nenhuma sessão ainda.</p></div></section>
+  </div>
+</main>
+<script>
+const prompts = [
+  'Fale sobre algo que você está construindo.',
+  'Explique um problema de atendimento ao cliente que você gostaria de resolver.',
+  'Descreva uma decisão técnica que você tomou recentemente.',
+  'Conte como você investigaria uma falha em um processo.',
+  'Explique uma tarefa que um assistente local deveria executar para você.'
+];
+let promptIndex=0, recorder, chunks=[], startedAt, timer;
+const $=id=>document.getElementById(id);
+function refreshValues(){ $('silenceValue').textContent=$('silence').value+' ms'; $('semanticValue').textContent=Number($('semantic').value).toFixed(2); $('vadValue').textContent=Number($('vad').value).toFixed(2); }
+document.querySelectorAll('input').forEach(x=>x.addEventListener('input',refreshValues)); refreshValues();
+$('next').onclick=()=>{ promptIndex=(promptIndex+1)%prompts.length; $('promptText').textContent=prompts[promptIndex]; };
+$('start').onclick=async()=>{
+  try { const stream=await navigator.mediaDevices.getUserMedia({audio:true}); recorder=new MediaRecorder(stream); chunks=[]; startedAt=Date.now();
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)}; recorder.start(250); $('start').disabled=true; $('stop').disabled=false; $('dot').className='dot'; $('connection').textContent='MICROFONE · OUVINDO'; $('status').textContent='Gravando. Finalize quando a ideia terminar.';
+    timer=setInterval(()=>{ $('meter').style.width=((Date.now()-startedAt)%7000)/70+'%'; },100);
+  } catch(e) { $('status').textContent='Microfone indisponível: '+e.message; }
+};
+$('stop').onclick=()=>{ if(!recorder)return; recorder.stop(); recorder.stream.getTracks().forEach(t=>t.stop()); clearInterval(timer); recorder.onstop=saveSession; $('start').disabled=false; $('stop').disabled=true; $('status').textContent='Salvando sessão e feedback...'; };
+async function saveSession(){ const audio=new Blob(chunks,{type:recorder.mimeType||'audio/webm'}); const payload={user_id:$('userId').value,niche_profile:$('nicheProfile').value,culture_context:'engineering_experimentation',career_goal:$('careerGoal').value,role_profile:$('roleProfile').value,prompt:$('promptText').textContent,duration_ms:Date.now()-startedAt,endpointing:{silence_ms:Number($('silence').value),semantic_weight:Number($('semantic').value),vad_threshold:Number($('vad').value)},manual_end:true,feedback:'PENDING',transcript_status:'PENDING'}; const created=await fetch('/api/sessions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json()); await fetch('/api/sessions/'+created.session_id+'/audio',{method:'POST',headers:{'Content-Type':audio.type},body:audio}); $('status').textContent='Sessão registrada para '+$('userId').value+'. O encerramento manual foi salvo como referência.'; $('dot').className='dot ready'; $('connection').textContent='LOCALHOST · READY'; loadSessions(); }
+async function loadSessions(){ const data=await fetch('/api/sessions').then(r=>r.json()); $('sessions').innerHTML=data.sessions.length?data.sessions.map(s=>`<div class="session"><span class="tag">${s.feedback}</span><div><strong>${s.user_id||'legacy'} · ${s.niche_profile||'sem nicho'}</strong><br><small>${s.prompt} · ${new Date(s.created_at).toLocaleString()} · ${Math.round(s.duration_ms/1000)}s · pausa ${s.endpointing.silence_ms}ms</small></div><button class="secondary" onclick="feedback('${s.session_id}','ACCEPTED')">Marcar útil</button></div>`).join(''):'<p style="color:var(--muted)">Nenhuma sessão ainda.</p>'; }
+async function feedback(id,value){ await fetch('/api/sessions/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({feedback:value})}); loadSessions(); }
+loadSessions();
+</script>
+</body>
+</html>
