@@ -1,0 +1,62 @@
+{
+  "profile_version": "0.1.0",
+  "user_id": "dev",
+  "evidence": {
+    "sessions": 4,
+    "audio_seconds": 770.1,
+    "transcribed_words": 1642,
+    "transcription_backend": "faster-whisper-small-cpu",
+    "mean_word_probability": 0.91
+  },
+  "niche_profile": "ai_engineering_predictive_maintenance",
+  "career_goal": "Forward Deployed Engineer",
+  "culture_context": "engineering_experimentation",
+  "observed_topics": [
+    "agentes de voz locais",
+    "adaptação de modelos por usuário",
+    "Forward Deployed Engineering",
+    "óculos de realidade aumentada",
+    "Meta Quest 3",
+    "entrada por voz e saída visual",
+    "contexto de ambiente",
+    "manutenção preditiva e chão de fábrica",
+    "DOE e qualidade",
+    "feedback humano e correção de alucinações",
+    "AI First e inferência contínua"
+  ],
+  "observed_reasoning_style": [
+    "explora possibilidades antes de fechar uma decisão",
+    "transfere abstrações entre setores",
+    "quebra problemas em componentes",
+    "conecta produto, carreira, engenharia e experiência do usuário",
+    "usa exemplos concretos para testar ideias"
+  ],
+  "observed_assistant_preferences": [
+    "preservar termos técnicos e nomes próprios",
+    "manter o objetivo central durante explorações longas",
+    "sinalizar quando uma resposta fugir do tema",
+    "propor perguntas assertivas que avancem a investigação",
+    "separar fato observado, hipótese e recomendação",
+    "usar feedback humano para corrigir o sistema"
+  ],
+  "domain_glossary": [
+    "Forward Deployed Engineer",
+    "fine-tuning",
+    "AI First",
+    "LLM",
+    "VAD",
+    "endpointing",
+    "vibecoding",
+    "Meta Quest 3",
+    "DOE",
+    "agente local",
+    "inferência contínua"
+  ],
+  "not_yet_proven": [
+    "preferência de tom da voz sintetizada",
+    "limiar pessoal de interrupção",
+    "latência aceitável de resposta",
+    "acurácia semântica do perfil",
+    "generalização para atendimento ao cliente"
+  ]
+}
