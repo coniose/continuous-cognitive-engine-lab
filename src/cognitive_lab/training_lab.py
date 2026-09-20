@@ -134,7 +134,7 @@ class TrainingHandler(BaseHTTPRequestHandler):
 def serve_training_lab(host: str = "127.0.0.1", port: int = 8765, runs_dir: Path = Path("runs/training")) -> None:
     TrainingHandler.store = TrainingStore(runs_dir)
     server = ThreadingHTTPServer((host, port), TrainingHandler)
-    print(f"Rhythmic Training Lab: http://{host}:{port}")
+    print(f"Continuous Cognitive Engine Lab: http://{host}:{port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
