@@ -37,6 +37,14 @@ texto, segmentos, timestamps por palavra e probabilidades. O primeiro perfil
 usa CPU para funcionar sem depender de DLLs CUDA específicas; a camada de
 transcrição registra o backend usado para permitir benchmark posterior na GPU.
 
+## Enrollment da frase de ativação
+
+O painel possui um modo de escuta contínua local. Ele usa o microfone somente
+depois da ativação explícita, detecta início e fim acústico por nível de áudio e
+salva trechos como candidatos de treinamento de wake phrase. Nesta fase ele não
+executa ferramentas e ainda não afirma reconhecer a frase; primeiro coletamos
+variações positivas e depois adicionamos exemplos negativos e um detector real.
+
 ## Identidade da sessão
 
 ```text
