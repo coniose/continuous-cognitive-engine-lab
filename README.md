@@ -1,3 +1,5 @@
+> **⚠️ Projeto descontinuado (set/2026).** Este repositório não recebe mais atualizações e será arquivado. Mantido apenas como histórico.
+
 # Continuous Cognitive Engine Lab
 
 Laboratório público para estudar agentes locais de voz, endpointing,
