@@ -20,3 +20,6 @@ cognitive-lab = "cognitive_lab.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+cognitive_lab = ["static/*.html", "static/xr/*.html", "static/xr/*.js", "static/xr/lessons/*.js"]

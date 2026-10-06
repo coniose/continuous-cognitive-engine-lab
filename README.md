@@ -12,6 +12,16 @@ O Training Lab roda localmente em Python e permite gravar áudio pelo navegador,
 encerrar a fala manualmente, separar sessões por usuário e nicho, ajustar
 endpointing, salvar metadados localmente e registrar feedback humano.
 
+## XR Lab: redes neurais em 3D
+
+Lições em WebXR para aprender redes neurais com as mãos no Meta Quest (ou com
+o mouse no PC): a paisagem 3D do erro com a bola descendo o gradiente e uma
+rede em camadas dobrando a própria superfície de saída até resolver o XOR. Um
+agente abre lições, narra e lê o que você fez por uma API simples. Detalhes
+em [`docs/xr_lab.md`](docs/xr_lab.md).
+
+Com o servidor rodando, abra http://127.0.0.1:8765/xr/.
+
 ## Execução
 
 ```powershell

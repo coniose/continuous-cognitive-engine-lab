@@ -6,7 +6,9 @@ import uuid
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
+
+from .xr_bridge import LESSONS, STATIC_TYPES, XRBridge, resolve_static
 
 
 ROOT = Path(__file__).resolve().parent / "static"
@@ -68,6 +70,7 @@ class TrainingStore:
 
 class TrainingHandler(BaseHTTPRequestHandler):
     store: TrainingStore
+    xr: XRBridge
 
     def _json(self, status: int, value: object) -> None:
         body = json.dumps(value, ensure_ascii=False).encode("utf-8")
@@ -94,10 +97,66 @@ class TrainingHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/sessions":
             self._json(200, {"sessions": self.store.list_sessions()})
             return
+        if parsed.path == "/xr":
+            self.send_response(301)
+            self.send_header("Location", "/xr/")
+            self.end_headers()
+            return
+        if parsed.path.startswith("/xr/"):
+            target = resolve_static(parsed.path)
+            if target is None:
+                self._json(404, {"error": "not_found"})
+                return
+            body = target.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", STATIC_TYPES[target.suffix])
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if parsed.path == "/api/xr/lessons":
+            self._json(200, {"lessons": LESSONS})
+            return
+        if parsed.path == "/api/xr/commands":
+            after = parse_qs(parsed.query).get("after", [None])[0]
+            try:
+                self._json(200, self.xr.commands_after(None if after is None else int(after)))
+            except ValueError:
+                self._json(400, {"error": "invalid_after"})
+            return
+        if parsed.path == "/api/xr/state":
+            self._json(200, self.xr.snapshot())
+            return
+        if parsed.path == "/api/xr/log":
+            self._json(200, {"log": self.xr.recent_logs()})
+            return
         self._json(404, {"error": "not_found"})
 
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path == "/api/xr/log":
+            self.xr.append_log(self._body().decode("utf-8", "replace"))
+            self.send_response(204)
+            self.end_headers()
+            return
+        if parsed.path in ("/api/xr/commands", "/api/xr/state"):
+            try:
+                payload = json.loads(self._body() or b"{}")
+            except json.JSONDecodeError:
+                self._json(400, {"error": "invalid_json"})
+                return
+            if not isinstance(payload, dict):
+                self._json(400, {"error": "invalid_json"})
+                return
+            if parsed.path == "/api/xr/state":
+                self._json(200, self.xr.update_state(payload))
+                return
+            try:
+                self._json(201, self.xr.push_command(payload))
+            except ValueError as error:
+                self._json(400, {"error": str(error)})
+            return
         if parsed.path == "/api/sessions":
             try:
                 payload = json.loads(self._body() or b"{}")
@@ -131,10 +190,16 @@ class TrainingHandler(BaseHTTPRequestHandler):
         return
 
 
-def serve_training_lab(host: str = "127.0.0.1", port: int = 8765, runs_dir: Path = Path("runs/training")) -> None:
+def build_server(host: str = "127.0.0.1", port: int = 8765, runs_dir: Path = Path("runs/training")) -> ThreadingHTTPServer:
     TrainingHandler.store = TrainingStore(runs_dir)
-    server = ThreadingHTTPServer((host, port), TrainingHandler)
+    TrainingHandler.xr = XRBridge()
+    return ThreadingHTTPServer((host, port), TrainingHandler)
+
+
+def serve_training_lab(host: str = "127.0.0.1", port: int = 8765, runs_dir: Path = Path("runs/training")) -> None:
+    server = build_server(host, port, runs_dir)
     print(f"Continuous Cognitive Engine Lab: http://{host}:{port}")
+    print(f"XR Lab (redes neurais em 3D): http://{host}:{port}/xr/")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
