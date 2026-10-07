@@ -15,6 +15,7 @@ Claude ◄── GET /api/xr/state ◄── estado + eventos da lição (a cada
 | id | o que você faz | o que aprende |
 |---|---|---|
 | `gradiente` | Pega a bola na paisagem do erro, solta e vê ela descer. Muda a taxa de aprendizado. | Um neurônio tem peso `w` e viés `b`; cada par tem um erro; aprender é descer o vale contra o gradiente. Taxa alta demais faz a bola pular de um lado para o outro. |
+| `rolo` | Arrasta a linha do tempo de um rolo de selagem, liga o modo ao vivo. | Gêmeo digital: a borracha afina com a confiabilidade Weibull (inferida), as leituras do teste de qualidade saem no produto (medidas) e a fórmula de risco aparece como um neurônio. Ver [`gemeo_digital_rolo.md`](gemeo_digital_rolo.md). |
 | `camadas` | Toca nas entradas `x1`/`x2`, treina a rede e alterna para "1 neurônio". | Um neurônio só inclina um plano e empaca em 0,5 no XOR; com uma camada oculta, a superfície de saída se dobra até acertar os quatro casos. |
 
 Convenção visual: **roxo = 0, amarelo = 1** em todas as lições; pesos
@@ -62,6 +63,7 @@ Não existe DevTools no Quest: a página manda os próprios logs e erros para
 | | | `{"action": "control", "name": "play", "lesson": "gradiente"}`: `play`, `pause`, `step`, `reset`, `lr`, `place`, `mode`, `input` (veja o catálogo) |
 | GET | `/api/xr/state` | lição aberta, estado (erro, pesos, épocas, previsões) e eventos recentes (`bola_solta`, `convergiu`, `empacou`, `entrada_alterada`…) |
 | GET | `/api/xr/log` | logs do navegador do óculos |
+| GET/POST | `/api/twin/readings` | leituras do teste de qualidade para o gêmeo do rolo (modo ao vivo) |
 
 Pela linha de comando:
 

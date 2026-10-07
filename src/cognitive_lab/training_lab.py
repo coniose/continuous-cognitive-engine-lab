@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .xr_bridge import LESSONS, STATIC_TYPES, XRBridge, resolve_static
+from .xr_bridge import LESSONS, STATIC_TYPES, TwinFeed, XRBridge, resolve_static
 
 
 ROOT = Path(__file__).resolve().parent / "static"
@@ -71,6 +71,7 @@ class TrainingStore:
 class TrainingHandler(BaseHTTPRequestHandler):
     store: TrainingStore
     xr: XRBridge
+    twin: TwinFeed
 
     def _json(self, status: int, value: object) -> None:
         body = json.dumps(value, ensure_ascii=False).encode("utf-8")
@@ -131,6 +132,9 @@ class TrainingHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/xr/log":
             self._json(200, {"log": self.xr.recent_logs()})
             return
+        if parsed.path == "/api/twin/readings":
+            self._json(200, self.twin.snapshot())
+            return
         self._json(404, {"error": "not_found"})
 
     def do_POST(self) -> None:  # noqa: N802
@@ -140,7 +144,7 @@ class TrainingHandler(BaseHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
-        if parsed.path in ("/api/xr/commands", "/api/xr/state"):
+        if parsed.path in ("/api/xr/commands", "/api/xr/state", "/api/twin/readings"):
             try:
                 payload = json.loads(self._body() or b"{}")
             except json.JSONDecodeError:
@@ -151,6 +155,12 @@ class TrainingHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/xr/state":
                 self._json(200, self.xr.update_state(payload))
+                return
+            if parsed.path == "/api/twin/readings":
+                try:
+                    self._json(201, self.twin.add(payload))
+                except ValueError as error:
+                    self._json(400, {"error": str(error)})
                 return
             try:
                 self._json(201, self.xr.push_command(payload))
@@ -193,6 +203,7 @@ class TrainingHandler(BaseHTTPRequestHandler):
 def build_server(host: str = "127.0.0.1", port: int = 8765, runs_dir: Path = Path("runs/training")) -> ThreadingHTTPServer:
     TrainingHandler.store = TrainingStore(runs_dir)
     TrainingHandler.xr = XRBridge()
+    TrainingHandler.twin = TwinFeed()
     return ThreadingHTTPServer((host, port), TrainingHandler)
 
 

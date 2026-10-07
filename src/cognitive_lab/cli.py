@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .training_lab import serve_training_lab
 from .transcription import transcribe_sessions
+from .twin_feed import simulate
 from .xr_bridge import LESSON_IDS
 
 
@@ -31,7 +32,12 @@ def main() -> None:
     parser.add_argument("--reprocess", action="store_true", help="reprocess already transcribed sessions")
     parser.add_argument("--show-lesson", choices=sorted(LESSON_IDS), help="open an XR lesson on the running lab")
     parser.add_argument("--say", help="show (and speak) a caption inside the XR lab")
+    parser.add_argument("--twin-simulate", action="store_true", help="feed synthetic quality-test readings to the roll twin")
+    parser.add_argument("--twin-interval", type=float, default=2.0, help="seconds between simulated readings")
     args = parser.parse_args()
+    if args.twin_simulate:
+        simulate(args.host, args.port, args.twin_interval)
+        return
     if args.show_lesson or args.say:
         if args.show_lesson:
             print(json.dumps(send_xr_command(args.host, args.port, {"action": "open_lesson", "lesson": args.show_lesson}), ensure_ascii=False))

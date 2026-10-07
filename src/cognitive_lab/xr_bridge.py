@@ -38,6 +38,22 @@ LESSONS = [
             "input": "[x1, x2] com valores 0 ou 1",
         },
     },
+    {
+        "id": "rolo",
+        "title": "Gêmeo do rolo",
+        "teaches": "Gêmeo digital de um rolo de selagem: a borracha encolhe com a "
+        "confiabilidade Weibull (inferida pela idade), as leituras do teste de "
+        "qualidade aparecem no produto saindo da máquina e a fórmula de risco é "
+        "mostrada como um neurônio.",
+        "controls": {
+            "play": None,
+            "pause": None,
+            "time": "idade do rolo em dias",
+            "speed": [0.5, 1, 2, 4],
+            "live": [True, False],
+            "swap": None,
+        },
+    },
 ]
 LESSON_IDS = {lesson["id"] for lesson in LESSONS}
 ACTIONS = {"open_lesson", "caption", "control"}
@@ -113,6 +129,55 @@ class XRBridge:
     def recent_logs(self) -> list[str]:
         with self.lock:
             return list(self.logs)
+
+
+class TwinFeed:
+    """Leituras reais (ou simuladas) do teste de qualidade para o modo ao vivo.
+
+    Um pipeline externo publica a data da troca do rolo e as leituras de força
+    dos lados A e B; a cena do gêmeo consulta e recalcula o risco no óculos.
+    """
+
+    def __init__(self, max_readings: int = 2000):
+        self.lock = threading.Lock()
+        self.troca: str | None = None
+        self.readings: deque[dict] = deque(maxlen=max_readings)
+
+    def add(self, payload: dict) -> dict:
+        troca = payload.get("troca")
+        readings = payload.get("readings", [])
+        if not isinstance(readings, list):
+            raise ValueError("readings deve ser uma lista")
+        clean = []
+        for item in readings:
+            try:
+                clean.append({
+                    "ts": _iso(item["ts"]),
+                    "forca_a": float(item["forca_a"]),
+                    "forca_b": float(item["forca_b"]),
+                })
+            except (KeyError, TypeError, ValueError) as error:
+                raise ValueError(f"leitura inválida {item!r}: precisa de ts ISO, forca_a e forca_b") from error
+        with self.lock:
+            if troca is not None:
+                troca = _iso(troca)
+                if troca != self.troca:
+                    self.readings.clear()
+                self.troca = troca
+            known = {r["ts"] for r in self.readings}
+            self.readings.extend(sorted((r for r in clean if r["ts"] not in known), key=lambda r: r["ts"]))
+            return {"troca": self.troca, "total": len(self.readings), "adicionadas": len(clean)}
+
+    def snapshot(self) -> dict:
+        with self.lock:
+            return {"troca": self.troca, "readings": list(self.readings)}
+
+
+def _iso(value: object) -> str:
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).isoformat()
 
 
 def resolve_static(path: str) -> Path | None:

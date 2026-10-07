@@ -7,7 +7,8 @@ from pathlib import Path
 import pytest
 
 from cognitive_lab.training_lab import build_server
-from cognitive_lab.xr_bridge import XRBridge, resolve_static
+from cognitive_lab.twin_feed import synthetic_readings
+from cognitive_lab.xr_bridge import TwinFeed, XRBridge, resolve_static
 
 
 def test_commands_are_delivered_once_in_order():
@@ -82,3 +83,28 @@ def test_http_roundtrip(tmp_path: Path):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_twin_feed_resets_on_new_swap_and_dedupes():
+    feed = TwinFeed()
+    troca, readings = synthetic_readings(days=3)
+    feed.add({"troca": troca, "readings": readings[:4]})
+    result = feed.add({"troca": troca, "readings": readings[2:6]})
+    assert result["total"] == 6
+    assert [r["ts"] for r in feed.snapshot()["readings"]] == sorted(r["ts"] for r in feed.snapshot()["readings"])
+    assert feed.add({"troca": "2026-02-01T00:00:00Z", "readings": []})["total"] == 0
+
+
+def test_twin_feed_rejects_bad_readings():
+    with pytest.raises(ValueError):
+        TwinFeed().add({"readings": [{"ts": "ontem", "forca_a": 1, "forca_b": 2}]})
+    with pytest.raises(ValueError):
+        TwinFeed().add({"readings": [{"ts": "2026-01-01T00:00:00Z", "forca_a": 1}]})
+
+
+def test_synthetic_cycle_degrades_and_sides_diverge():
+    _, readings = synthetic_readings()
+    first, last = readings[0], readings[-1]
+    assert (first["forca_a"] + first["forca_b"]) / 2 > 1200
+    assert (last["forca_a"] + last["forca_b"]) / 2 < 800
+    assert abs(last["forca_a"] - last["forca_b"]) > abs(first["forca_a"] - first["forca_b"])

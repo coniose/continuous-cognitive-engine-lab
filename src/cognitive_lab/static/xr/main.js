@@ -8,8 +8,9 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { COLORS, button, label } from './ui.js';
 import gradiente from './lessons/gradiente.js';
 import camadas from './lessons/camadas.js';
+import rolo from './lessons/rolo.js';
 
-const LESSONS = [gradiente, camadas];
+const LESSONS = [gradiente, camadas, rolo];
 const log = window.log || console.log;
 log('xr-lab: three', THREE.REVISION);
 
