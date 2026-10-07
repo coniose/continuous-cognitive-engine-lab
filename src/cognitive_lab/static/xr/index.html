@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XR Lab · Redes Neurais</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0f19; color: #e8ecf4; font-family: system-ui, sans-serif; overflow: hidden; }
+  #info { position: absolute; top: 16px; left: 16px; max-width: 520px; padding: 14px 16px; border-radius: 12px;
+          background: rgba(15, 20, 32, 0.85); font-size: 15px; line-height: 1.45; }
+  #info.hidden { display: none; }
+  #info b { color: #d7ef4b; }
+  #info small { color: #94a3b8; }
+</style>
+<script>
+  // Log remoto: no óculos não há DevTools, então tudo vai para o servidor
+  // (GET /api/xr/log no PC mostra o que aconteceu dentro do navegador).
+  window.log = (...a) => {
+    const msg = a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ');
+    try { navigator.sendBeacon('/api/xr/log', msg); } catch (e) {}
+    console.log(msg);
+  };
+  addEventListener('error', e => log('ERRO', e.message, (e.filename || '') + ':' + (e.lineno || '')));
+  addEventListener('unhandledrejection', e => log('ERRO promise', String(e.reason)));
+  log('página carregou', navigator.userAgent);
+</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="info">
+  <b>XR Lab · Redes Neurais</b><br>
+  No Quest: toque em <b>START AR</b> (ou ENTER VR) embaixo. Aponte e aperte o gatilho ou faça pinça.<br>
+  No PC: arraste para girar a câmera, clique nos botões e na paisagem.<br>
+  <small>Um agente pode abrir lições e narrar: POST /api/xr/commands</small>
+</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>
