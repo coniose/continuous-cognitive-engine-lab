@@ -28,9 +28,9 @@ export function crossEntropy(p, y) {
   return -(y * Math.log(q) + (1 - y) * Math.log(1 - q));
 }
 
-// ---- Lição 1: um neurônio com uma entrada (horas de estudo -> passou?) ----
-// Os rótulos se sobrepõem de propósito (alguém estudou 3h e passou, outro
-// estudou 5,5h e não passou). Assim o vale do erro tem um fundo de verdade.
+// ---- Capítulo 6: um neurônio com uma entrada (ordens contraditórias por dia -> divergiu?) ----
+// Os rótulos se sobrepõem de propósito (um androide com 3 ordens/dia divergiu,
+// outro com 5,5 não). Assim o vale do erro tem um fundo de verdade.
 export const STUDY = {
   hours: [1, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8],
   passed: [0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1],

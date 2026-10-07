@@ -81,10 +81,10 @@ function drawBoard(g, W, H, s) {
   g.font = '700 34px system-ui, sans-serif';
   g.textBaseline = 'alphabetic';
   g.textAlign = 'left';
-  g.fillText('O neurônio: horas de estudo → passou?', 28, 52);
+  g.fillText('O neurônio: ordens contraditórias → divergiu?', 28, 52);
   g.font = '500 24px system-ui, sans-serif';
   g.fillStyle = COLORS.muted;
-  g.fillText('previsão = σ(w · x + b)    (x = horas, centralizadas)', 28, 88);
+  g.fillText('previsão = σ(w · x + b)    (x = ordens contraditórias por dia)', 28, 88);
 
   // área do gráfico
   const left = 70, right = W - 30, top = 112, bottom = H - 150;
@@ -102,7 +102,7 @@ function drawBoard(g, W, H, s) {
   g.fillText('1', left - 10, py(1) + 7);
   g.fillText('0', left - 10, py(0) + 7);
   g.textAlign = 'center';
-  for (let h = 0; h <= 9; h += 3) g.fillText(`${h}h`, px(h), bottom + 28);
+  for (let h = 0; h <= 9; h += 3) g.fillText(`${h}`, px(h), bottom + 28);
 
   // curva do neurônio com os (w, b) atuais
   g.strokeStyle = '#ffffff';
@@ -137,7 +137,14 @@ function drawBoard(g, W, H, s) {
 
 export default {
   id: 'gradiente',
-  title: 'Descida do gradiente',
+  title: 'Aprender',
+  steps: [
+    { text: 'Capítulo 6, aprender. No painel, cada ponto é um androide: quantas ordens contraditórias recebia por dia, e se divergiu, em amarelo, ou não, em roxo.' },
+    { text: 'O neurônio aqui tem só dois botões: o peso w e o viés b. Para cada par de valores, ele erra mais ou menos. Desenhando esse erro como altura, surge esta paisagem.' },
+    { text: 'Aponte para a paisagem e aperte: a bola vai até lá. Solte e veja ela descer. Descer o vale é aprender: cada passo ajusta w e b na direção em que o erro diminui.' },
+    { text: 'A seta amarela é o gradiente: para onde o erro cresce. A bola anda no sentido contrário. Aumente demais a taxa de aprendizado e a bola começa a pular de um lado para o outro.' },
+    { text: 'Era isso que faltava no capítulo quatro: lá, alguém escolheu zero vírgula seis e zero vírgula quatro. Aqui, os pesos saem dos dados.' },
+  ],
 
   create(ctx) {
     const group = new THREE.Group();

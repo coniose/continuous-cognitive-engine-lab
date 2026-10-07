@@ -8,7 +8,7 @@ import pytest
 
 from cognitive_lab.training_lab import build_server
 from cognitive_lab.twin_feed import synthetic_readings
-from cognitive_lab.xr_bridge import TwinFeed, XRBridge, resolve_static
+from cognitive_lab.xr_bridge import LESSONS, TwinFeed, XRBridge, resolve_static
 
 
 def test_commands_are_delivered_once_in_order():
@@ -33,11 +33,28 @@ def test_new_page_starts_after_backlog():
         {"action": "open_lesson", "lesson": "nao_existe"},
         {"action": "caption", "text": "  "},
         {"action": "control"},
+        {"action": "guide"},
+        {"action": "guide", "step": 0},
+        {"action": "guide", "step": True},
+        {"action": "guide", "step": "pular"},
     ],
 )
 def test_invalid_commands_are_rejected(payload):
     with pytest.raises(ValueError):
         XRBridge().push_command(payload)
+
+
+def test_trail_order_ends_with_learning_after_the_roll():
+    ids = [lesson["id"] for lesson in LESSONS]
+    assert ids == ["intro", "contar", "tempo", "medir", "neuronio", "rolo", "gradiente", "camadas"]
+    for lesson_id in ids:
+        assert resolve_static(f"/xr/lessons/{lesson_id}.js") is not None
+
+
+def test_guide_commands_accept_next_prev_repeat_and_step_number():
+    bridge = XRBridge()
+    for step in ["next", "prev", "repeat", 3]:
+        assert bridge.push_command({"action": "guide", "step": step})["step"] == step
 
 
 def test_state_keeps_recent_events_for_the_agent():
@@ -71,7 +88,7 @@ def test_http_roundtrip(tmp_path: Path):
     try:
         status, content_type, body = call("/xr/main.js")
         assert status == 200 and content_type.startswith("text/javascript") and b"openLesson" in body
-        assert json.loads(call("/api/xr/lessons")[2])["lessons"][0]["id"] == "gradiente"
+        assert json.loads(call("/api/xr/lessons")[2])["lessons"][0]["id"] == "intro"
         status, _, body = call("/api/xr/commands", {"action": "open_lesson", "lesson": "camadas"})
         assert status == 201 and json.loads(body)["id"] == 1
         assert json.loads(call("/api/xr/commands?after=0")[2])["commands"][0]["lesson"] == "camadas"

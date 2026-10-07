@@ -67,7 +67,14 @@ function drawPanel(g, W, H, s) {
 
 export default {
   id: 'camadas',
-  title: 'Camadas e XOR',
+  title: 'Camadas',
+  steps: [
+    { text: 'Capítulo 7, camadas. Um conflito: x1 é o que a ordem manda, agir ou não. x2 é o que a consciência do androide manda. Ele diverge quando as duas discordam.', control: ['mode', 'rede'] },
+    { text: 'Toque nas bolinhas x1 e x2 para escolher o caso e veja o sinal atravessar a rede. Cada bolinha é um neurônio, cada cabo é um peso: azul positivo, laranja negativo.' },
+    { text: 'Agora estou trocando para um neurônio só. Treine: ele empaca em meio a meio. Um neurônio só inclina um plano, e discordar não se separa com uma reta.', control: ['mode', 'neuronio'] },
+    { text: 'Voltei para a rede com uma camada escondida. Treine de novo: o lençol de saída se dobra até encostar nos quatro cubos. Camadas permitem regras como diverge quando discordam.', control: ['mode', 'rede'] },
+    { text: 'Fim da trilha. Você viu probabilidade como contagem, o risco crescendo com o tempo, medição contra inferência, um neurônio que junta tudo, o rolo de verdade e como máquinas aprendem os pesos.' },
+  ],
 
   create(ctx) {
     const group = new THREE.Group();
@@ -164,9 +171,9 @@ export default {
     });
     const probe = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1, 8), new THREE.MeshBasicMaterial({ color: COLORS.accent }));
     plot.add(probe);
-    const axis1 = label('x1 →', { width: 0.1, height: 0.035 });
+    const axis1 = label('x1 ordem →', { width: 0.16, height: 0.035 });
     axis1.position.set(0, -0.03, SURF / 2 + 0.03);
-    const axis2 = label('x2 →', { width: 0.1, height: 0.035 });
+    const axis2 = label('x2 consciência →', { width: 0.22, height: 0.035 });
     axis2.position.set(SURF / 2 + 0.06, -0.01, 0);
     axis2.rotation.y = -Math.PI / 2;
     const axisY = label('ŷ ↑', { width: 0.08, height: 0.035 });
@@ -174,8 +181,8 @@ export default {
     plot.add(axis1, axis2, axisY);
 
     const hint = label([
-      'Toque nas bolinhas x1 e x2 para mudar a pergunta e veja o sinal atravessar as camadas.',
-      'Treine e veja o gráfico 3D se dobrar até encostar nos cubos (as respostas certas do XOR).',
+      'x1 = a ordem manda agir · x2 = a consciência manda agir · diverge (1) quando discordam.',
+      'Toque em x1 e x2, treine e veja o gráfico 3D se dobrar até encostar nos cubos.',
     ], { width: 1.25, height: 0.075, size: 0.62, background: COLORS.panel });
     hint.position.set(0, 0.3, -0.05);
     group.add(hint);

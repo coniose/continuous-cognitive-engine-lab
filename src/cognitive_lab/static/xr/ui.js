@@ -113,3 +113,55 @@ export function placeCylinder(mesh, from, to, radius) {
   mesh.scale.set(radius, length, radius);
   mesh.quaternion.setFromUnitVectors(UP, dir.normalize());
 }
+
+// Quebra `text` em linhas que cabem em `maxWidth` com a fonte atual de `g`.
+export function wrapLines(g, text, maxWidth) {
+  const lines = [''];
+  for (const word of String(text).split(/\s+/)) {
+    const next = `${lines[lines.length - 1]} ${word}`.trim();
+    if (g.measureText(next).width > maxWidth && lines[lines.length - 1]) lines.push(word);
+    else lines[lines.length - 1] = next;
+  }
+  return lines;
+}
+
+// Trilho com um botão pegável (linha do tempo, alavanca). `onChange(f)` recebe
+// a fração 0..1 enquanto você arrasta; `set(f)` move o botão sem avisar.
+export function slider({ length = 0.6, vertical = false, onChange, onGrab, onRelease, color = 0x475569 } = {}) {
+  const group = new THREE.Group();
+  const track = new THREE.Mesh(
+    new THREE.BoxGeometry(vertical ? 0.024 : length, vertical ? length : 0.014, 0.024),
+    new THREE.MeshStandardMaterial({ color }),
+  );
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 24, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 }));
+  group.add(track, knob);
+  const plane = new THREE.Plane(), hit = new THREE.Vector3(), normal = new THREE.Vector3(), origin = new THREE.Vector3();
+  let value = 0;
+  const place = f => {
+    value = Math.min(Math.max(f, 0), 1);
+    const c = (value - 0.5) * length;
+    knob.position.set(vertical ? 0 : c, vertical ? c : 0, 0);
+  };
+  const scrub = pointer => {
+    group.updateMatrixWorld();
+    normal.set(0, 0, 1).transformDirection(group.matrixWorld);
+    plane.setFromNormalAndCoplanarPoint(normal, group.getWorldPosition(origin));
+    if (!pointer.raycaster.ray.intersectPlane(plane, hit)) return;
+    const local = group.worldToLocal(hit);
+    place((vertical ? local.y : local.x) / length + 0.5);
+    onChange?.(value);
+  };
+  const handlers = {
+    onGrab: (h, pointer) => { onGrab?.(); scrub(pointer); },
+    onDrag: scrub,
+    onRelease: () => onRelease?.(value),
+    onHover: on => knob.scale.setScalar(on ? 1.3 : 1),
+  };
+  track.userData.interactive = handlers;
+  knob.userData.interactive = handlers;
+  group.set = place;
+  group.knob = knob;
+  group.value = () => value;
+  place(0);
+  return group;
+}

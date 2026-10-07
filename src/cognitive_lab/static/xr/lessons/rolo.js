@@ -80,7 +80,15 @@ function drawPanel(g, W, H, s) {
 
 export default {
   id: 'rolo',
-  title: 'Gêmeo do rolo',
+  title: 'O rolo',
+  steps: [
+    { text: 'Capítulo 5, o rolo. Mesmo problema, outra máquina. Um rolo de selagem também envelhece e também pode falhar. Tudo o que você viu nos androides está aqui.', control: [['swap'], ['speed', 2]] },
+    { text: 'A borracha do rolo é a curva do capítulo dois: começa grossa e amarela e afina com a idade. É o INFERIDO, só pela idade, igual ao risco da Kara pelos dias de vida.' },
+    { text: 'As bolinhas no produto saindo são os testes de qualidade, lados A e B, como o autodiagnóstico e o scan do Connor. O vidro vermelho é o muro: força abaixo do limite é teste reprovado.' },
+    { text: 'Ao lado está o neurônio do capítulo quatro, com os mesmos pesos: zero vírgula seis, zero vírgula quatro e zero vírgula sessenta e cinco. A luz na máquina é o LED do androide.' },
+    { text: 'Agora estou levando a linha do tempo até o dia dezessete. Pela idade, o rolo ainda tem mais da metade de chance de estar bom. Mas as bolinhas já encostam no vidro. É a Kara de novo: o medido pega a falha antes.', control: ['time', 17] },
+    { text: 'Até aqui, os pesos foram escolhidos por alguém. Próximo capítulo: como uma máquina aprende os pesos sozinha, a partir dos dados.' },
+  ],
 
   create(ctx) {
     const group = new THREE.Group();

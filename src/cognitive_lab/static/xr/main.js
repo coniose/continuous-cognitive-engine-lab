@@ -5,12 +5,20 @@ import * as THREE from 'three';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { COLORS, button, label } from './ui.js';
+import { COLORS, button, canvasPlane, label, roundRect, wrapLines } from './ui.js';
+import intro from './lessons/intro.js';
+import contar from './lessons/contar.js';
+import tempo from './lessons/tempo.js';
+import medir from './lessons/medir.js';
+import neuronio from './lessons/neuronio.js';
+import rolo from './lessons/rolo.js';
 import gradiente from './lessons/gradiente.js';
 import camadas from './lessons/camadas.js';
-import rolo from './lessons/rolo.js';
 
-const LESSONS = [gradiente, camadas, rolo];
+// A trilha, em ordem: um problema só (a chance de um androide divergir) até
+// chegar no gêmeo do rolo, e depois como uma máquina aprende os pesos.
+const LESSONS = [intro, contar, tempo, medir, neuronio, rolo, gradiente, camadas];
+const chapterName = (k, short = false) => (k === 0 ? 'Introdução' : `Cap. ${k}${short ? '' : ` de ${LESSONS.length - 1}`} · ${LESSONS[k].title}`);
 const log = window.log || console.log;
 log('xr-lab: three', THREE.REVISION);
 
@@ -54,7 +62,9 @@ function firstHit(pointer) {
   return hits.find(h => isShown(h.object)) || null;
 }
 
+let interacted = false; // o navegador só deixa falar depois de um gesto seu
 function press(pointer) {
+  interacted = true;
   const hit = firstHit(pointer);
   if (!hit) return false;
   const handlers = hit.object.userData.interactive;
@@ -143,20 +153,130 @@ function emit(type, data = {}) {
   log('evento', JSON.stringify(event));
 }
 
-// ---------- menu e legenda ----------
+// ---------- navegação: ◀ capítulo ▶, lista de capítulos, voz ----------
+let current = null; // lição aberta: { id, instance }
 const menu = new THREE.Group();
 menu.position.set(0, 0.42, -0.05);
 stage.add(menu);
-const menuButtons = {};
-LESSONS.forEach((lesson, k) => {
-  const b = button(`${k + 1} · ${lesson.title}`, () => openLesson(lesson.id, 'menu'), { width: 0.3, height: 0.055, color: '#334155' });
-  b.position.set((k - LESSONS.length / 2) * 0.32 + 0.0, 0, 0);
-  menuButtons[lesson.id] = b;
-  menu.add(b);
-});
+const indexOfCurrent = () => LESSONS.findIndex(l => l.id === current?.id);
+const goChapter = delta => {
+  const k = indexOfCurrent() + delta;
+  if (k >= 0 && k < LESSONS.length) openLesson(LESSONS[k].id, 'navegação');
+};
+const voiceButton = button('🔊 Voz: sim', () => setVoice(!voiceOn), { width: 0.15, height: 0.055, color: '#334155' });
+const prevButton = button('◀', () => goChapter(-1), { width: 0.08, height: 0.055, color: '#334155' });
+const chapterLabel = label('', { width: 0.44, height: 0.055, size: 0.62, background: 'rgba(15, 20, 32, 0.88)' });
+const nextButton = button('▶', () => goChapter(+1), { width: 0.08, height: 0.055, color: '#334155' });
+const listButton = button('☰ Capítulos', () => { chapterList.visible = !chapterList.visible; }, { width: 0.17, height: 0.055, color: '#334155' });
 const recenter = button('📍 Trazer para frente', () => { placeStageNextFrame = 1; }, { width: 0.26, height: 0.055, color: '#334155' });
-recenter.position.set(LESSONS.length / 2 * 0.32 + 0.0, 0, 0);
-menu.add(recenter);
+[[voiceButton, -0.6], [prevButton, -0.465], [chapterLabel, -0.19], [nextButton, 0.085], [listButton, 0.22], [recenter, 0.45]]
+  .forEach(([b, x]) => { b.position.set(x, 0, 0); menu.add(b); });
+
+// lista de capítulos (☰): aparece na frente de tudo
+const chapterList = new THREE.Group();
+chapterList.position.set(0, 0.1, 0.35);
+chapterList.visible = false;
+stage.add(chapterList);
+const rows = Math.ceil(LESSONS.length / 2);
+const listBackground = canvasPlane(0.74, 0.1 + rows * 0.07, (g, W, H) => roundRect(g, 0, 0, W, H, 30, 'rgba(15, 20, 32, 0.95)'));
+listBackground.position.z = -0.005;
+chapterList.add(listBackground);
+const chapterButtons = {};
+LESSONS.forEach((lesson, k) => {
+  const b = button(chapterName(k, true), () => { chapterList.visible = false; openLesson(lesson.id, 'menu'); }, { width: 0.34, height: 0.055, color: '#334155' });
+  b.position.set(k < rows ? -0.18 : 0.18, (rows - 1) * 0.035 - (k % rows) * 0.07, 0);
+  chapterButtons[lesson.id] = b;
+  chapterList.add(b);
+});
+// desenhada por cima de tudo: o produto do rolo, por exemplo, avança até perto de você
+chapterList.traverse(o => { if (o.material) { o.material.depthTest = false; o.renderOrder = o === listBackground ? 10 : 11; } });
+
+// ---------- guia narrado: cada capítulo é um roteiro de passos curtos ----------
+const guide = { step: 0 };
+const guideGroup = new THREE.Group();
+guideGroup.position.set(-0.95, 0.02, 0.15);
+guideGroup.rotation.y = 0.6;
+stage.add(guideGroup);
+const guidePanel = canvasPlane(0.46, 0.36, (g, W, H) => {
+  const lesson = current && LESSONS.find(l => l.id === current.id);
+  const steps = lesson?.steps || [];
+  roundRect(g, 0, 0, W, H, 28, 'rgba(15, 20, 32, 0.92)');
+  if (!lesson) return;
+  g.textBaseline = 'alphabetic';
+  g.textAlign = 'left';
+  g.fillStyle = COLORS.accent;
+  g.font = '700 30px system-ui, sans-serif';
+  g.fillText(chapterName(indexOfCurrent(), true), 28, 50);
+  g.textAlign = 'right';
+  g.fillStyle = COLORS.muted;
+  g.font = '600 24px system-ui, sans-serif';
+  if (steps.length) g.fillText(`passo ${guide.step + 1} de ${steps.length}`, W - 28, 50);
+  g.textAlign = 'left';
+  // pontinhos de progresso
+  steps.forEach((_, k) => {
+    g.fillStyle = k <= guide.step ? COLORS.accent : 'rgba(255,255,255,0.2)';
+    g.beginPath(); g.arc(34 + k * 26, 76, 8, 0, Math.PI * 2); g.fill();
+  });
+  g.fillStyle = COLORS.ink;
+  g.font = '500 31px system-ui, sans-serif';
+  wrapLines(g, steps[guide.step]?.text || '', W - 56).slice(0, 10).forEach((line, k) => g.fillText(line, 28, 128 + k * 41));
+});
+guideGroup.add(guidePanel);
+const backStep = button('◀ Voltar', () => showStep(guide.step - 1), { width: 0.13, height: 0.055, color: '#475569' });
+const repeatStep = button('🔊 Repetir', () => sayStep(), { width: 0.14, height: 0.055, color: '#475569' });
+const nextStep = button('Próximo ▶', () => advance(), { width: 0.17, height: 0.055, color: '#7c3aed' });
+[[backStep, -0.16], [repeatStep, -0.015], [nextStep, 0.145]].forEach(([b, x]) => { b.position.set(x, -0.215, 0); guideGroup.add(b); });
+
+let voiceOn = true;
+let ptVoice = null;
+function pickVoice() {
+  if (!('speechSynthesis' in window)) return;
+  const voices = speechSynthesis.getVoices();
+  ptVoice = voices.find(v => v.lang === 'pt-BR') || voices.find(v => v.lang?.startsWith('pt')) || null;
+  log('vozes:', voices.length, 'pt:', ptVoice ? `${ptVoice.name} (${ptVoice.lang})` : 'nenhuma');
+}
+if ('speechSynthesis' in window) {
+  pickVoice();
+  speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+} else log('sem speechSynthesis neste navegador');
+function speak(text) {
+  if (!voiceOn || !interacted || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(String(text));
+    utterance.lang = 'pt-BR';
+    if (ptVoice) utterance.voice = ptVoice;
+    speechSynthesis.speak(utterance);
+  } catch (e) { log('fala indisponível:', String(e)); }
+}
+function setVoice(on) {
+  voiceOn = on;
+  voiceButton.set({ text: on ? '🔊 Voz: sim' : '🔇 Voz: não' });
+  if (!on && 'speechSynthesis' in window) speechSynthesis.cancel();
+}
+
+function showStep(k, { talk = true } = {}) {
+  const steps = LESSONS.find(l => l.id === current?.id)?.steps || [];
+  if (!steps.length) return;
+  guide.step = Math.min(Math.max(k, 0), steps.length - 1);
+  const step = steps[guide.step];
+  const controls = !step.control ? [] : Array.isArray(step.control[0]) ? step.control : [step.control];
+  controls.forEach(([name, value]) => current.instance.control(name, value));
+  const last = guide.step === steps.length - 1;
+  const lastChapter = indexOfCurrent() === LESSONS.length - 1;
+  nextStep.set({ text: last ? (lastChapter ? 'Fim ✓' : 'Cap. seguinte ▶') : 'Próximo ▶' });
+  backStep.visible = guide.step > 0;
+  guidePanel.redraw();
+  if (talk) speak(step.text);
+  emit('passo_guia', { passo: guide.step + 1, de: steps.length });
+}
+const currentSteps = () => LESSONS.find(l => l.id === current?.id)?.steps || [];
+const sayStep = () => speak(currentSteps()[guide.step]?.text || '');
+function advance() {
+  const steps = LESSONS.find(l => l.id === current?.id)?.steps || [];
+  if (guide.step < steps.length - 1) showStep(guide.step + 1);
+  else goChapter(+1);
+}
 
 const caption = label('', { width: 1.25, height: 0.1, size: 0.6, minLines: 3, background: 'rgba(124, 58, 237, 0.92)' });
 caption.position.set(0, 0.55, -0.05);
@@ -187,7 +307,6 @@ function showCaption(text, speak = true) {
 }
 
 // ---------- lições ----------
-let current = null;
 const ctx = { emit, log, refreshInteractive };
 function openLesson(id, source = 'código') {
   const lesson = LESSONS.find(l => l.id === id);
@@ -201,7 +320,12 @@ function openLesson(id, source = 'código') {
   stage.add(current.instance.group);
   refreshInteractive();
   hovered = new Set();
-  Object.entries(menuButtons).forEach(([key, b]) => b.set({ active: key === id }));
+  Object.entries(chapterButtons).forEach(([key, b]) => b.set({ active: key === id }));
+  const k = indexOfCurrent();
+  chapterLabel.setText(chapterName(k));
+  prevButton.visible = k > 0;
+  nextButton.visible = k < LESSONS.length - 1;
+  showStep(0, { talk: source !== 'url' });
   const url = new URL(location.href);
   url.searchParams.set('licao', id);
   history.replaceState(null, '', url);
@@ -215,6 +339,13 @@ function handleCommand(command) {
   log('comando', JSON.stringify(command));
   if (command.action === 'open_lesson') openLesson(command.lesson, 'agente');
   if (command.action === 'caption') showCaption(command.text, command.speak !== false);
+  if (command.action === 'guide') {
+    const step = command.step;
+    if (step === 'next') advance();
+    else if (step === 'prev') showStep(guide.step - 1);
+    else if (step === 'repeat') sayStep();
+    else if (Number.isInteger(step)) showStep(step - 1);
+  }
   if (command.action === 'control' && current) {
     if (command.lesson && command.lesson !== current.id) openLesson(command.lesson, 'agente');
     const ok = current.instance.control(command.name, command.value);
@@ -246,6 +377,7 @@ async function pushState() {
       body: JSON.stringify({
         licao: current?.id,
         imersivo: renderer.xr.isPresenting,
+        guia: { passo: guide.step + 1, total: LESSONS.find(l => l.id === current?.id)?.steps?.length || 0 },
         estado: current?.instance.snapshot(),
         eventos: events,
       }),
@@ -263,6 +395,8 @@ renderer.xr.addEventListener('sessionstart', () => {
   placeStageNextFrame = 1;
   document.getElementById('info')?.classList.add('hidden');
   emit('xr_iniciou', { modo: session.environmentBlendMode || 'opaque' });
+  interacted = true; // START AR foi um toque seu: já dá para narrar
+  setTimeout(sayStep, 1200);
 });
 renderer.xr.addEventListener('sessionend', () => {
   scene.background = BACKGROUND;
@@ -321,4 +455,4 @@ openLesson(LESSONS.some(l => l.id === requested) ? requested : LESSONS[0].id, 'u
 addXrButton();
 pollCommands();
 pushState();
-window.xrLab = { openLesson, showCaption, handleCommand, get current() { return current; } };
+window.xrLab = { openLesson, showCaption, handleCommand, showStep, get current() { return current; } };
