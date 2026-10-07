@@ -31,10 +31,23 @@ capítulo 5 seja reconhecimento e não novidade.
 | 7 | `camadas` | Treina rede × 1 neurônio. | Conflito ordem × consciência (XOR) precisa de camada oculta. | — |
 
 Cada capítulo tem um **guia narrado** (painel à esquerda): passos curtos,
-lidos em voz alta pelo navegador quando há voz disponível, com **◀ Voltar**,
+lidos em voz alta, com **◀ Voltar**,
 **🔊 Repetir** e **Próximo ▶**. Alguns passos mexem na cena sozinhos (por
 exemplo, levar a linha do tempo até o dia 17). No topo: **◀ ▶** troca de
 capítulo, **☰ Capítulos** abre a lista e **🔊 Voz** liga ou desliga a narração.
+
+O navegador do Quest **não tem** `speechSynthesis`, então a narração é um MP3
+por passo, gerado antes no PC (voz neural pt-BR via `edge-tts`, que usa o
+serviço online de voz do Edge) e mantido fora do git:
+
+```powershell
+pip install edge-tts
+python -m cognitive_lab.narration          # gera só o que falta em static/xr/narracao/
+scp -r src/cognitive_lab/static/xr/narracao quest3:~/cce-lab/src/cognitive_lab/static/xr/
+```
+
+O nome de cada arquivo é o hash do texto do passo: mudou o texto, rode de novo.
+Sem o arquivo, a página tenta a voz do navegador (funciona no PC).
 
 Convenção visual: **roxo = 0, amarelo = 1** em todas as lições; pesos
 **azuis são positivos**, **laranja são negativos** e a espessura mostra a força.

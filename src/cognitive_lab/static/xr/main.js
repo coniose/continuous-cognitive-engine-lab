@@ -239,20 +239,44 @@ if ('speechSynthesis' in window) {
   pickVoice();
   speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
 } else log('sem speechSynthesis neste navegador');
-function speak(text) {
-  if (!voiceOn || !interacted || !('speechSynthesis' in window)) return;
+// O navegador do Quest não tem speechSynthesis: a narração dos guias é um MP3
+// pré-gerado (python -m cognitive_lab.narration), com o hash do texto no nome.
+// Sem o arquivo (ex.: legenda nova de um agente), tenta a voz do navegador.
+const fnv1a = text => {
+  let h = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(text)) { h ^= byte; h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0');
+};
+let narration = null;
+function stopSpeech() {
+  narration?.pause();
+  narration = null;
+  if ('speechSynthesis' in window) speechSynthesis.cancel();
+}
+function speakWithBrowser(text) {
+  if (!('speechSynthesis' in window)) return;
   try {
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(String(text));
+    const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'pt-BR';
     if (ptVoice) utterance.voice = ptVoice;
     speechSynthesis.speak(utterance);
   } catch (e) { log('fala indisponível:', String(e)); }
 }
+function speak(text) {
+  text = String(text);
+  if (!voiceOn || !interacted || !text) return;
+  stopSpeech();
+  const audio = narration = new Audio(`narracao/${fnv1a(text)}.mp3`);
+  audio.play().catch(e => {
+    if (narration !== audio) return; // já trocou de passo
+    log('sem áudio para o passo:', String(e));
+    speakWithBrowser(text);
+  });
+}
 function setVoice(on) {
   voiceOn = on;
   voiceButton.set({ text: on ? '🔊 Voz: sim' : '🔇 Voz: não' });
-  if (!on && 'speechSynthesis' in window) speechSynthesis.cancel();
+  if (!on) stopSpeech();
 }
 
 function showStep(k, { talk = true } = {}) {
@@ -283,7 +307,7 @@ caption.position.set(0, 0.55, -0.05);
 caption.visible = false;
 stage.add(caption);
 let captionTimer = null;
-function showCaption(text, speak = true) {
+function showCaption(text, talk = true) {
   const lines = [''];
   for (const word of String(text).split(/\s+/)) {
     const candidate = `${lines[lines.length - 1]} ${word}`.trim();
@@ -296,14 +320,7 @@ function showCaption(text, speak = true) {
   caption.visible = true;
   clearTimeout(captionTimer);
   captionTimer = setTimeout(() => { caption.visible = false; }, 20000);
-  if (speak && 'speechSynthesis' in window) {
-    try {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(String(text));
-      utterance.lang = 'pt-BR';
-      speechSynthesis.speak(utterance);
-    } catch (e) { log('fala indisponível:', String(e)); }
-  }
+  if (talk) speak(text);
 }
 
 // ---------- lições ----------
@@ -455,4 +472,4 @@ openLesson(LESSONS.some(l => l.id === requested) ? requested : LESSONS[0].id, 'u
 addXrButton();
 pollCommands();
 pushState();
-window.xrLab = { openLesson, showCaption, handleCommand, showStep, get current() { return current; } };
+window.xrLab = { openLesson, showCaption, handleCommand, showStep, speak, get current() { return current; } };

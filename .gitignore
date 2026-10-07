@@ -5,3 +5,5 @@ __pycache__/
 runs/
 .pytest_cache/
 *.log
+# narração gerada (python -m cognitive_lab.narration)
+src/cognitive_lab/static/xr/narracao/
